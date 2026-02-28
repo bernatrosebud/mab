@@ -139,8 +139,8 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
   align-items: center;
 }
 #obra-title-text { color: var(--black); font-weight: 400; }
-#obra-fuente { color: var(--gray-mid); margin-left: 10px; font-size: 9px; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; }
-#obra-fuente:hover { color: var(--black); }
+.obra-fuente-link { color: var(--gray-mid); margin-left: 10px; font-size: 9px; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; }
+.obra-fuente-link:hover { color: var(--black); }
 #back-btn { cursor: pointer; margin-right: 12px; }
 #back-btn:hover { color: var(--black); }
 
@@ -212,8 +212,13 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
   color: #000; cursor: pointer; margin-bottom: 20px;
   flex-shrink: 0;
 }
+#intro-atlas {
+  font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--gray-mid); cursor: pointer; margin-top: -16px; margin-bottom: 20px;
+  width: 52px; text-align: center;
+}
+#intro-atlas:hover { color: var(--black); }
 #intro-autor {
-  font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--gray-mid); margin-bottom: 3px; cursor: pointer;
 }
 #intro-autor:hover { color: var(--black); }
@@ -320,21 +325,91 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
 /* LIGHTBOX */
 #lightbox {
   display: none; position: fixed; inset: 0; z-index: 999;
-  background: rgba(255,255,255,.97); align-items: center; justify-content: center;
+  background: #fff; align-items: stretch;
 }
 #lightbox.open { display: flex; }
+#lb-img-area {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; overflow: hidden; padding: 48px 24px 48px 24px;
+}
 #lightbox img, #lightbox video {
-  max-width: calc(100vw - 80px); max-height: calc(100vh - 80px);
-  object-fit: contain; cursor: pointer; user-select: none;
+  max-width: 100%; max-height: 100%;
+  object-fit: contain; user-select: none;
 }
 #lb-video { display: none; background: #000; }
 #lb-img { display: block; }
+#lb-sidebar {
+  width: 300px; flex-shrink: 0;
+  background: #fff;
+  padding: 48px 14px 24px 14px;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+#lightbox:hover #lb-sidebar {
+  opacity: 1;
+  pointer-events: auto;
+}
+#lb-tags-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+#lb-sidebar .lb-tag-group { display: contents; }
+#lb-sidebar .lb-tag-group-label { display: none; }
+#lb-sidebar .lb-tag {
+  flex: 1;
+  display: flex; align-items: center;
+  padding: 0 6px;
+  border: none;
+  border-radius: 0;
+  font-size: 7.5px; letter-spacing: 0.05em;
+  color: #c0c0c0; cursor: pointer;
+  text-transform: none;
+  box-sizing: border-box; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+  min-height: 0;
+}
+#lb-sidebar .lb-tag:hover { color: var(--black); background: #fafafa; }
+#lb-sidebar .lb-tag.active { color: var(--black); font-weight: 700; background: none; }
+#lb-sidebar .lb-tag:hover { border-color: var(--black); color: var(--black); }
 #lb-close {
   position: fixed; top: 24px; right: 28px; font-family: var(--font-mono);
   font-size: 10px; letter-spacing: 0.12em; cursor: pointer;
   color: var(--gray-dark); user-select: none; text-transform: uppercase;
+  z-index: 1001;
 }
 #lb-close:hover { color: var(--black); }
+
+/* FILTER POPUP */
+#lb-popup {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: #fff;
+  flex-direction: column;
+}
+#lb-popup.open { display: flex; }
+#lb-popup-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 28px; flex-shrink: 0;
+  font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+#lb-popup-close {
+  font-size: 10px; letter-spacing: 0.12em;
+  cursor: pointer; color: var(--gray-dark); text-transform: uppercase;
+}
+#lb-popup-close:hover { color: var(--black); }
+#lb-popup-title {
+  color: var(--gray-mid);
+}
+#lb-popup-gallery {
+  flex: 1; overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px; padding: 0 3px 3px;
+}
 
 /* EMPTY */
 #empty-state {
@@ -353,6 +428,7 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
 <div id="intro-page" class="active">
   <div id="intro-left">
     <div id="intro-logo" onclick="enterBrowser(null)">MAB</div>
+    <div id="intro-atlas" onclick="enterBrowser(null)">ATLAS</div>
     <div id="intro-nombre"></div>
     <div id="intro-tags"></div>
   </div>
@@ -447,10 +523,23 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
   </div>
 </main>
 
-<div id="lightbox" onclick="lbNext()">
+<div id="lightbox">
   <div id="lb-close" onclick="lbClose(event)">✕</div>
-  <img id="lb-img" src="" alt="">
-  <video id="lb-video" controls autoplay loop style="display:none;max-width:calc(100vw - 80px);max-height:calc(100vh - 80px);cursor:pointer;" onclick="lbNext()"></video>
+  <div id="lb-sidebar">
+    <div id="lb-tags-content"></div>
+  </div>
+  <div id="lb-img-area" onclick="lbNext()">
+    <img id="lb-img" src="" alt="">
+    <video id="lb-video" controls autoplay loop style="display:none;max-width:100%;max-height:100%;cursor:pointer;" onclick="lbNext()"></video>
+  </div>
+</div>
+
+<div id="lb-popup">
+  <div id="lb-popup-header">
+    <div id="lb-popup-title"></div>
+    <div id="lb-popup-close" onclick="lbPopupClose()">✕ VOLVER</div>
+  </div>
+  <div id="lb-popup-gallery"></div>
 </div>
 
 <script src="obras.js"></script>
@@ -487,7 +576,7 @@ function usoExpand(tag) {
 }
 const AF = { autor:[], estado:[], uso:[], pais:[], ciudad:[], decada:[], anio:[], fotografo:[], complejidad:[], material:[], componente:[], tipografica:[], tipoespacial:[] };
 let currentObraId = null;
-let lbImages = [];
+let lbImages = []; // array of {src, elementos, tipografica, extra, obra}
 let lbIdx = 0;
 
 function getFotografos(o) {
@@ -581,9 +670,9 @@ function buildTags() {
     fotografo:   allFotografos,
     complejidad: ["Nivel 1","Nivel 2","Nivel 3","Nivel 4","Nivel 5"],
     uso:         USO_TODOS,
-    material: ["Acero","Acero corten","Acero inoxidable","Adobe","Aluminio","Arenisca","Bambú","Bronce","CLT","Caliza","Cerámica","Cobre","Corcho","Fibra de carbono","Fibra de vidrio","Granito","Hierro","Hormigón","Ladrillo","MDF","Madera laminada","Madera maciza","Membrana ETFE","Membrana tensada","OSB","PVC","Paja","Piedra","Pizarra","Policarbonato","Porcelana","Terracota","Tierra compactada","Titanio","Vidrio","Vidrio laminado","Vidrio templado","Yeso","Zinc"],
+    material: ["Acero","Acero corten","Acero inoxidable","Adobe","Aluminio","Arenisca","Bambu","Bronce","CLT","Caliza","Ceramica","Cobre","Tierra compactada","Granito","Hierro","Hormigon","Ladrillo","Madera laminada","Madera maciza","Membrana ETFE","PVC","Piedra","Pizarra","Policarbonato","Porcelana","Terracota","Titanio","Vidrio","Vidrio laminado","Vidrio templado","Yeso","Zinc"],
     componente:  ["Aire acondicionado","Artefacto sanitario","Ascensor","Barandilla","Canaleta","Carpinteria","Cerco","Cielorraso","Columna","Cubierta","Entrepiso","Escalera","Estructura","Fachada ventilada","Griferia","Hogar","Iluminacion","Instalacion de incendio","Instalacion pluvial","Lucarna","Manija","Marquesina","Muro compuesto","Muro opaco","Muro translucido","Muro transparente","Panel","Parasol","Parrilla","Persiana","Piso","Porton","Postigo","Puerta","Rampa","Revestimiento","Senaletica","Toldo","Viga"],
-    tipografica: ["Axonometria","Corte","Despiece","Detalle constructivo","Foto de maqueta","Fotomontaje","Maqueta virtual","Perfil urbano","Planimetria","Planta","Render exterior","Render interior","Vista"],
+    tipografica: ["Axonometria","Corte","Despiece","Detalle constructivo","Fotomontaje","Maqueta","Perfil urbano","Perspectiva exterior","Perspectiva interior","Planimetria","Planta","Vista"],
     tipoespacial: ["Aula","Auditorio","Baño","Biblioteca","Calle","Cocina","Comedor","Consultorio","Deposito","Dormitorio","Espacio deportivo","Espacio industrial","Estacionamiento","Estar","Foyer","Galeria","Garaje cubierto","Hall de ingreso","Invernadero","Jardin","Lobby","Oficina","Patio","Piscina cubierta","Plaza","Sala de espera","Sala de lectura","Sala de reuniones","Showroom","Terraza","Vereda","Vestuario"]
   };
 
@@ -634,11 +723,20 @@ function buildTags() {
 
 function toggleF(key, val, el) {
   const a = AF[key], i = a.indexOf(val);
-  i === -1 ? (a.push(val), el.classList.add('active')) : (a.splice(i,1), el.classList.remove('active'));
+  i === -1 ? (a.push(val), el && el.classList.add('active')) : (a.splice(i,1), el && el.classList.remove('active'));
   updateActiveCount(key);
+  // Si el popup está abierto, cerrarlo todo y ir al buscador
+  const popup = document.getElementById('lb-popup');
+  if (popup && popup.classList.contains('open')) {
+    popup.classList.remove('open');
+    document.getElementById('lightbox').classList.remove('open');
+    currentObraId = null;
+    document.getElementById('page-title-bar').style.display = 'none';
+    renderHome();
+    return;
+  }
   const intro = document.getElementById('intro-page');
   if (intro && intro.classList.contains('active')) { enterBrowser(null); return; }
-  // Al usar filtros superiores siempre ir al buscador (home), nunca quedarse en obra
   renderHome();
 }
 
@@ -673,13 +771,29 @@ function obraMatch(o) {
   return true;
 }
 function imgMatch(img) {
+  // Filtro tipografica (independiente de elementos)
   if (AF.tipografica.length && !AF.tipografica.some(t => (img.tipografica||[]).includes(t))) return false;
-  if (AF.tipoespacial.length && !AF.tipoespacial.some(t => (img.tipoespacial||[]).includes(t))) return false;
-  if (AF.material.length && !AF.material.every(m => (img.materiales||[]).includes(m))) return false;
-  if (AF.componente.length && !AF.componente.every(c => (img.componentes||[]).includes(c))) return false;
-  return true;
+
+  // Filtros B: tipoespacial + material + componente deben coincidir dentro del MISMO elemento
+  const hasFiltrosB = AF.tipoespacial.length || AF.material.length || AF.componente.length;
+  if (!hasFiltrosB) return true;
+
+  const elementos = img.elementos || [];
+
+  // Debe existir al menos UN elemento que satisfaga TODOS los filtros B activos simultaneamente
+  return elementos.some(el => {
+    if (AF.tipoespacial.length && !AF.tipoespacial.includes(el.tipoespacial)) return false;
+    if (AF.material.length && !AF.material.includes(el.material)) return false;
+    if (AF.componente.length && !AF.componente.includes(el.componente)) return false;
+    return true;
+  });
 }
 
+
+// Helper: extraer valores únicos de elementos por campo
+function elemVals(img, campo) {
+  return [...new Set((img.elementos||[]).map(el => el[campo]).filter(Boolean))];
+}
 // ══════════════════════════════════════════
 //  RENDER HOME
 // ══════════════════════════════════════════
@@ -713,21 +827,21 @@ function renderHome() {
       const img = item.img;
       const allTags = [
         ...(img.tipografica||[]),
-        ...(img.tipoespacial||[]),
-        ...(img.materiales||[]),
-        ...(img.componentes||[]),
+        ...elemVals(img, "tipoespacial"),
+        ...elemVals(img, "material"),
+        ...elemVals(img, "componente"),
       ];
-      if (AF.material.length)     score += AF.material.filter(v => (img.materiales||[]).includes(v)).length * 10;
-      if (AF.componente.length)   score += AF.componente.filter(v => (img.componentes||[]).includes(v)).length * 10;
+      if (AF.material.length)     score += AF.material.filter(v => elemVals(img,"material").includes(v)).length * 10;
+      if (AF.componente.length)   score += AF.componente.filter(v => elemVals(img,"componente").includes(v)).length * 10;
       if (AF.tipografica.length)  score += AF.tipografica.filter(v => (img.tipografica||[]).includes(v)).length * 10;
-      if (AF.tipoespacial.length) score += AF.tipoespacial.filter(v => (img.tipoespacial||[]).includes(v)).length * 10;
+      if (AF.tipoespacial.length) score += AF.tipoespacial.filter(v => elemVals(img,"tipoespacial").includes(v)).length * 10;
       // Bonus: menos tags totales = más preponderante el tag activo
       score += Math.max(0, 10 - allTags.length);
       item.score = score;
     });
     todasLasImagenes.sort((a, b) => b.score - a.score);
 
-    lbImages = todasLasImagenes.map(x => x.img.src);
+    lbImages = todasLasImagenes.map(x => ({ src: x.img.src, elementos: x.img.elementos||[], tipografica: x.img.tipografica||[], extra: x.img.extra||[], obra: x.obra }));
     lbIdx = 0;
 
     todasLasImagenes.forEach(({ img, obra }, idx) => {
@@ -735,9 +849,9 @@ function renderHome() {
       // Tags B primero, completar con A
       const tagsB = [
         ...img.tipografica.map(v => ({k:'tipografica',v})),
-        ...(img.tipoespacial||[]).map(v => ({k:'tipoespacial',v})),
-        ...img.materiales.map(v => ({k:'material',v})),
-        ...img.componentes.map(v => ({k:'componente',v})),
+        ...elemVals(img,'tipoespacial').map(v => ({k:'tipoespacial',v})),
+        ...elemVals(img,'material').map(v => ({k:'material',v})),
+        ...elemVals(img,'componente').map(v => ({k:'componente',v})),
       ].filter(x => x.v);
       const tagsA = [
         ...getAutores(obra).map(a=>({k:'autor',v:a})),
@@ -800,15 +914,20 @@ function renderObra(id) {
   nombreSpan.textContent = o.nombre;
   titleEl.appendChild(autorSpan); titleEl.appendChild(sep); titleEl.appendChild(nombreSpan);
   // Link fuente
-  let fuenteEl = document.getElementById('obra-fuente');
-  if (!fuenteEl) {
-    fuenteEl = document.createElement('a');
-    fuenteEl.id = 'obra-fuente';
-    fuenteEl.target = '_blank';
-    document.getElementById('page-title-bar').appendChild(fuenteEl);
+  // Limpiar fuentes anteriores
+  document.querySelectorAll('.obra-fuente-link').forEach(el => el.remove());
+  if (o.url) {
+    const urls = Array.isArray(o.url) ? o.url : [o.url];
+    const bar = document.getElementById('page-title-bar');
+    urls.forEach((url, i) => {
+      const a = document.createElement('a');
+      a.className = 'obra-fuente-link';
+      a.href = url;
+      a.target = '_blank';
+      a.textContent = i === 0 ? 'Fuente' : 'Fuente ' + (i + 1);
+      bar.appendChild(a);
+    });
   }
-  if (o.url) { fuenteEl.href = o.url; fuenteEl.textContent = 'Fuente'; fuenteEl.style.display = ''; }
-  else { fuenteEl.style.display = 'none'; }
   document.title = autorLabel + ' · MAB';
 
   const g = document.getElementById('gallery');
@@ -832,21 +951,21 @@ function renderObra(id) {
     if (t === 'Vista')                                   return 11;
     if (t === 'Axonometria')                             return 12;
     if (t === 'Detalle constructivo' || t === 'Despiece')return 13;
-    if (t === 'Render interior' || t === 'Render exterior' || t === 'Fotomontaje' || t === 'Maqueta virtual') return 15;
-    if (t === 'Foto de maqueta')                         return 16;
+    if (t === 'Perspectiva exterior' || t === 'Perspectiva interior' || t === 'Fotomontaje') return 15;
+    if (t === 'Maqueta')                                    return 16;
     return 14;
   };
   imgs = [...imgs].sort((a, b) => escalaFallback(a) - escalaFallback(b));
-  lbImages = imgs.map(i => i.src); lbIdx = 0;
+  lbImages = imgs.map(i => ({ src: i.src, elementos: i.elementos||[], tipografica: i.tipografica||[], extra: i.extra||[], obra: o })); lbIdx = 0;
 
   imgs.forEach((img, idx) => {
     const cell = mkCell(img.src, '', () => lbOpen(idx));
     // Filtros B (prioridad)
     const tagsB = [
       ...img.tipografica.map(v => ({k:'tipografica',v})),
-      ...(img.tipoespacial||[]).map(v => ({k:'tipoespacial',v})),
-      ...img.materiales.map(v => ({k:'material',v})),
-      ...img.componentes.map(v => ({k:'componente',v}))
+      ...elemVals(img,'tipoespacial').map(v => ({k:'tipoespacial',v})),
+      ...elemVals(img,'material').map(v => ({k:'material',v})),
+      ...elemVals(img,'componente').map(v => ({k:'componente',v}))
     ].filter(x => x.v);
     // Filtros A de la obra (fallback)
     const tagsA = [
@@ -929,7 +1048,7 @@ function mkCell(src, alt, clickFn, autor, nombre) {
 
 function attachHoverSlideshow(cell, obra) {
   if (!obra) return;
-  const imgs = obra.imagenes.filter(i => !i.tipografica || !i.tipografica.length);
+  const imgs = obra.imagenes;
   if (imgs.length <= 1) return;
   let timer = null;
   let idx = 0;
@@ -1146,15 +1265,15 @@ function updateIntroMeta(item) {
     }
   };
   // Prioridad 1: tags de la imagen actual
-  (item.img.tipoespacial||[]).forEach(v => pushB('tipoespacial', v));
-  (item.img.materiales||[]).forEach(v => pushB('material', v));
-  (item.img.componentes||[]).forEach(v => pushB('componente', v));
+  elemVals(item.img,'tipoespacial').forEach(v => pushB('tipoespacial', v));
+  elemVals(item.img,'material').forEach(v => pushB('material', v));
+  elemVals(item.img,'componente').forEach(v => pushB('componente', v));
   // Prioridad 2: otros tags de la misma obra (no de otras)
   if (bTags.length < 4) {
     item.obra.imagenes.forEach(img => {
-      (img.tipoespacial||[]).forEach(v => pushB('tipoespacial', v));
-      (img.materiales||[]).forEach(v => pushB('material', v));
-      (img.componentes||[]).forEach(v => pushB('componente', v));
+      elemVals(img,'tipoespacial').forEach(v => pushB('tipoespacial', v));
+      elemVals(img,'material').forEach(v => pushB('material', v));
+      elemVals(img,'componente').forEach(v => pushB('componente', v));
     });
   }
   // Fallback semántico: "Sin datos" — nunca vacío pero sin inventar
@@ -1216,9 +1335,9 @@ function getFilterValues(k) {
     else if (k === 'fotografo') vals.add(o.fotografo);
     else if (k === 'complejidad') vals.add(o.complejidad);
     else o.imagenes.forEach(img => {
-      (img.materiales||[]).forEach(v => vals.add(v));
-      (img.componentes||[]).forEach(v => vals.add(v));
-      (img.tipoespacial||[]).forEach(v => vals.add(v));
+      elemVals(img,'material').forEach(v => vals.add(v));
+      elemVals(img,'componente').forEach(v => vals.add(v));
+      elemVals(img,'tipoespacial').forEach(v => vals.add(v));
       (img.tipografica||[]).forEach(v => vals.add(v));
     });
   });
@@ -1313,6 +1432,8 @@ function enterBrowser(obraId) {
 }
 
 function initIntro() {
+  // Si hay parámetros en la URL, ir directo al buscador
+  if (window.location.search) { enterBrowser(null); return; }
   if (typeof OBRAS === 'undefined' || !OBRAS || !OBRAS.length) { enterBrowser(); return; }
 
   buildIntroPool(() => {
@@ -1329,12 +1450,19 @@ function shareFilters() {
   });
   if (currentObraId) params.set('obra', currentObraId);
   const url = window.location.origin + window.location.pathname + (params.toString() ? '?' + params.toString() : '');
-  navigator.clipboard.writeText(url).then(() => {
-    const btn = document.getElementById('share-btn');
-    const orig = btn.textContent;
-    btn.textContent = '✓ Copiado';
-    setTimeout(() => btn.textContent = orig, 2000);
-  });
+  const btn = document.getElementById('share-btn');
+  const orig = btn.textContent;
+  // Intentar clipboard, fallback a prompt
+  try {
+    navigator.clipboard.writeText(url).then(() => {
+      btn.textContent = '✓';
+      setTimeout(() => btn.textContent = orig, 2000);
+    }).catch(() => {
+      prompt('Copiá este link:', url);
+    });
+  } catch(e) {
+    prompt('Copiá este link:', url);
+  }
 }
 
 function loadFiltersFromURL() {
@@ -1344,6 +1472,14 @@ function loadFiltersFromURL() {
     if (AF.hasOwnProperty(key)) {
       AF[key] = val.split('|').filter(Boolean);
     }
+  });
+  // Activar visualmente los tags en la UI
+  Object.entries(AF).forEach(([key, vals]) => {
+    vals.forEach(v => {
+      const ft = document.querySelector(`.tag[data-k="${key}"][data-v="${v}"]`);
+      if (ft) ft.classList.add('active');
+      updateActiveCount(key);
+    });
   });
   const obra = params.get('obra');
   if (obra) { renderObra(obra); return; }
@@ -1385,35 +1521,164 @@ function goIntro() {
 //  LIGHTBOX
 // ══════════════════════════════════════════
 const VIDEO_EXTS = /\.(mp4|webm|mov|avi|mkv|ogv|m4v)$/i;
-function lbShow(src) {
-  const img = document.getElementById('lb-img');
+function lbShow(item) {
+  const src = typeof item === 'string' ? item : item.src;
+  const imgEl = document.getElementById('lb-img');
   const vid = document.getElementById('lb-video');
   if (VIDEO_EXTS.test(src)) {
-    img.style.display = 'none'; vid.style.display = 'block';
+    imgEl.style.display = 'none'; vid.style.display = 'block';
     vid.src = src; vid.play();
   } else {
     vid.style.display = 'none'; vid.pause(); vid.src = '';
-    img.style.display = 'block'; img.src = src;
+    imgEl.style.display = 'block'; imgEl.src = src;
   }
+  // Render sidebar tags
+  const sidebar = document.getElementById('lb-tags-content');
+  if (!sidebar || typeof item === 'string') return;
+  sidebar.innerHTML = '';
+
+  const elementos = item.elementos || [];
+  const tipografica = item.tipografica || [];
+  const extra = item.extra || [];
+  const obra = item.obra || {};
+
+  function makeTag(label, k, v) {
+    const t = document.createElement('span');
+    t.className = 'lb-tag';
+    t.textContent = label;
+    // Check if active
+    if (k && AF[k] && AF[k].includes(v)) t.classList.add('active');
+    if (k && v) {
+      t.onclick = (e) => {
+        e.stopPropagation();
+        lbPopupOpen(k, v);
+      };
+      t.dataset.k = k; t.dataset.v = v;
+    }
+    return t;
+  }
+
+  function addGroup(label, tags) {
+    const g = document.createElement('div');
+    g.className = 'lb-tag-group';
+    const lbl = document.createElement('div');
+    lbl.className = 'lb-tag-group-label';
+    lbl.textContent = label;
+    g.appendChild(lbl);
+    tags.forEach(([l,k,v]) => g.appendChild(makeTag(l,k,v)));
+    sidebar.appendChild(g);
+  }
+
+  // Lista plana única — máximo 30 tags
+  const autores = obra.autor ? (Array.isArray(obra.autor) ? obra.autor : [obra.autor]) : [];
+  const fotografos = obra.fotografo ? (Array.isArray(obra.fotografo) ? obra.fotografo : [obra.fotografo]) : [];
+  const materiales = [...new Set(elementos.map(el => el.material).filter(Boolean))];
+  const componentes = [...new Set(elementos.map(el => el.componente).filter(Boolean))];
+  const espacios = [...new Set(elementos.map(el => el.tipoespacial).filter(Boolean))];
+
+  const allTags = [
+    ...autores.map(v => [v,'autor',v]),
+    obra.uso ? [obra.uso,'uso',obra.uso] : null,
+    obra.pais ? [obra.pais,'pais',obra.pais] : null,
+    obra.ciudad ? [obra.ciudad,'ciudad',obra.ciudad] : null,
+    obra.decada ? [obra.decada,'decada',obra.decada] : null,
+    obra.anio ? [String(obra.anio),'anio',String(obra.anio)] : null,
+    ...fotografos.filter(f=>f&&f!=='Sin crédito').map(v => [v,'fotografo',v]),
+    obra.complejidad ? [obra.complejidad,'complejidad',obra.complejidad] : null,
+    ...materiales.map(v => [v,'material',v]),
+    ...componentes.map(v => [v,'componente',v]),
+    ...tipografica.map(v => [v,'tipografica',v]),
+    ...espacios.map(v => [v,'tipoespacial',v]),
+    ...extra.map(v => [v,null,null]),
+  ].filter(Boolean).slice(0, 30);
+
+  // Un solo grupo para que display:contents funcione
+  const g = document.createElement('div');
+  g.className = 'lb-tag-group';
+  allTags.forEach(([l,k,v]) => g.appendChild(makeTag(l,k,v)));
+  sidebar.appendChild(g);
 }
 function lbOpen(idx) {
   lbIdx = idx;
-  lbShow(lbImages[lbIdx]);
+  lbShow(lbImages[lbIdx] || lbImages[0]);
   document.getElementById('lightbox').classList.add('open');
 }
 function lbNext() { lbIdx = (lbIdx+1) % lbImages.length; lbShow(lbImages[lbIdx]); }
+function lbPrev() { lbIdx = (lbIdx-1+lbImages.length) % lbImages.length; lbShow(lbImages[lbIdx]); }
 function lbClose(e) { e.stopPropagation(); document.getElementById('lightbox').classList.remove('open'); const vid = document.getElementById('lb-video'); vid.pause(); vid.src=''; }
 
 document.addEventListener('keydown', e => {
+  const popup = document.getElementById('lb-popup');
+  if (popup.classList.contains('open')) {
+    if (e.key==='Escape') lbPopupClose();
+    return;
+  }
   const lb = document.getElementById('lightbox');
   if (!lb.classList.contains('open')) return;
   if (e.key==='Escape') lb.classList.remove('open');
   if (e.key==='ArrowRight'||e.key==='ArrowDown') lbNext();
-  if (e.key==='ArrowLeft'||e.key==='ArrowUp') {
-    lbIdx = (lbIdx - 1 + lbImages.length) % lbImages.length;
-    lbShow(lbImages[lbIdx]);
-  }
+  if (e.key==='ArrowLeft'||e.key==='ArrowUp') { lbPrev(); }
 });
+
+function lbPopupOpen(k, v) {
+  // Collect all matching images
+  const results = [];
+  OBRAS.forEach(obra => {
+    obra.imagenes.forEach(img => {
+      let match = false;
+      if (k === 'material') match = (img.elementos||[]).some(el => el.material === v);
+      else if (k === 'componente') match = (img.elementos||[]).some(el => el.componente === v);
+      else if (k === 'tipoespacial') match = (img.elementos||[]).some(el => el.tipoespacial === v);
+      else if (k === 'tipografica') match = (img.tipografica||[]).includes(v);
+      else if (k === 'autor') match = getAutores(obra).includes(v);
+      else if (k === 'uso') match = obra.uso === v;
+      else if (k === 'pais') match = obra.pais === v;
+      else if (k === 'ciudad') match = obra.ciudad === v;
+      else if (k === 'decada') match = obra.decada === v;
+      else if (k === 'anio') match = String(obra.anio) === v;
+      else if (k === 'fotografo') match = getFotografos(obra).includes(v);
+      else if (k === 'complejidad') match = obra.complejidad === v;
+      if (match) results.push({ img, obra });
+    });
+  });
+
+  const popup = document.getElementById('lb-popup');
+  const title = document.getElementById('lb-popup-title');
+  const gallery = document.getElementById('lb-popup-gallery');
+
+  title.textContent = v + ' — ' + results.length + ' imágenes';
+  gallery.innerHTML = '';
+
+  results.forEach(({ img, obra }) => {
+    const cell = mkCell(img.src, '', () => {
+      document.getElementById('lb-popup').classList.remove('open');
+      document.getElementById('lightbox').classList.remove('open');
+      renderObra(obra.id);
+    });
+    // Tags B de la imagen
+    const tagsB = [
+      ...img.tipografica.map(v => ({k:'tipografica',v})),
+      ...elemVals(img,'tipoespacial').map(v => ({k:'tipoespacial',v})),
+      ...elemVals(img,'material').map(v => ({k:'material',v})),
+      ...elemVals(img,'componente').map(v => ({k:'componente',v}))
+    ].filter(x => x.v);
+    const tagsA = [
+      ...getAutores(obra).map(a=>({k:'autor',v:a})),
+      {k:'uso',v:obra.uso},{k:'pais',v:obra.pais},
+      {k:'ciudad',v:obra.ciudad},{k:'decada',v:obra.decada},{k:'anio',v:String(obra.anio)},
+    ].filter(x=>x.v&&x.v!=='—');
+    const combined = [...tagsB];
+    for (const a of tagsA) { if (combined.length >= 8) break; combined.push(a); }
+    cell.appendChild(mkTagsDiv8(combined));
+    gallery.appendChild(cell);
+  });
+
+  popup.classList.add('open');
+}
+
+function lbPopupClose() {
+  document.getElementById('lb-popup').classList.remove('open');
+}
 
 window.addEventListener('DOMContentLoaded', () => {
   initIntro();
