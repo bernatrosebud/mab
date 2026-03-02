@@ -452,11 +452,14 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
   }
 
   /* MOBILE OBRA VIEWER */
-  #mobile-obra-viewer { display: flex; flex-direction: column; height: calc(100vh - 56px); position: relative; }
-  #mobile-obra-photos { flex: 1; display: flex; overflow-x: scroll; scroll-snap-type: x mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; padding-bottom: 90px; }
+  #mobile-obra-viewer { position: fixed; top: 56px; left: 0; right: 0; bottom: 90px; z-index: 10; background: #fff; }
+  #mobile-obra-photos { position: absolute; inset: 0; display: flex; overflow-x: scroll; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
   #mobile-obra-photos .mob-photo { scroll-snap-align: start; flex: 0 0 100%; width: 100%; height: 100%; object-fit: contain; display: block; background: #fff; }
-  #mobile-obra-counter { position: absolute; top: 10px; right: 14px; font-family: var(--font-mono); font-size: 11px; color: #888; z-index: 10; background: rgba(255,255,255,0.85); padding: 2px 6px; }
-  #mobile-obra-tags { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e0e0e0; padding: 6px 8px; z-index: 200; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  #mobile-obra-dots { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; z-index: 20; pointer-events: none; }
+  #mobile-obra-dots .dot { width: 6px; height: 6px; border-radius: 50%; background: #ccc; transition: background 0.2s; }
+  #mobile-obra-dots .dot.active { background: #000; }
+  #mobile-obra-tags { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e0e0e0; padding: 6px 8px; z-index: 200; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; height: 90px; box-sizing: border-box; }
+  #gallery { padding-bottom: 0; }
 }
 </style>
 </head>
@@ -839,27 +842,21 @@ function elemVals(img, campo) {
 // ══════════════════════════════════════════
 
 function renderObraMobile(o, g) {
-  const existingTags = document.getElementById('mobile-obra-tags');
-  if (existingTags) existingTags.remove();
-
-  const viewer = document.createElement('div');
-  viewer.id = 'mobile-obra-viewer';
-
-  // Contador
-  const counter = document.createElement('div');
-  counter.id = 'mobile-obra-counter';
-  viewer.appendChild(counter);
-
-  // Fotos swipe horizontal
-  const photosEl = document.createElement('div');
-  photosEl.id = 'mobile-obra-photos';
+  // Limpiar elementos previos
+  ['mobile-obra-tags','mobile-obra-viewer'].forEach(id => { const el=document.getElementById(id); if(el) el.remove(); });
 
   let imgs = o.imagenes;
   const hasF = AF.tipografica.length || AF.tipoespacial.length || AF.material.length || AF.componente.length;
   if (hasF) imgs = imgs.filter(imgMatch);
-  const lbImgsArr = AF.fotografo.length ? imgs.filter(i => (i.tipografica||[]).length === 0) : imgs;
-  lbImages = lbImgsArr.map(i => ({ src: i.src, elementos: i.elementos||[], tipografica: i.tipografica||[], extra: i.extra||[], obra: o }));
+  lbImages = imgs.map(i => ({ src: i.src, elementos: i.elementos||[], tipografica: i.tipografica||[], extra: i.extra||[], obra: o }));
 
+  // Viewer fijo
+  const viewer = document.createElement('div');
+  viewer.id = 'mobile-obra-viewer';
+
+  // Fotos swipe horizontal
+  const photosEl = document.createElement('div');
+  photosEl.id = 'mobile-obra-photos';
   imgs.forEach((img, idx) => {
     const photo = document.createElement('img');
     photo.className = 'mob-photo';
@@ -867,19 +864,31 @@ function renderObraMobile(o, g) {
     photo.loading = idx === 0 ? 'eager' : 'lazy';
     photosEl.appendChild(photo);
   });
-
   viewer.appendChild(photosEl);
-  g.appendChild(viewer);
+
+  // Dots indicadores (max 20 para no saturar)
+  const dotsEl = document.createElement('div');
+  dotsEl.id = 'mobile-obra-dots';
+  const maxDots = Math.min(imgs.length, 20);
+  for (let i=0; i<maxDots; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i===0 ? ' active' : '');
+    dotsEl.appendChild(d);
+  }
+  viewer.appendChild(dotsEl);
+  document.body.appendChild(viewer);
 
   // Tags fijos abajo
   const tagsBar = document.createElement('div');
   tagsBar.id = 'mobile-obra-tags';
   document.body.appendChild(tagsBar);
 
-  function updateTags(idx) {
+  function updateView(idx) {
     const img = imgs[idx];
     if (!img) return;
-    counter.textContent = (idx + 1) + ' / ' + imgs.length;
+    // Actualizar dots
+    dotsEl.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i===idx));
+    // Actualizar tags
     tagsBar.innerHTML = '';
     const elementos = img.elementos || [];
     const tags = [
@@ -902,19 +911,17 @@ function renderObraMobile(o, g) {
     });
   }
 
-  // Detectar foto visible con scroll
   photosEl.addEventListener('scroll', () => {
     const idx = Math.round(photosEl.scrollLeft / photosEl.offsetWidth);
-    updateTags(idx);
+    updateView(idx);
   });
 
-  updateTags(0);
+  updateView(0);
 }
 function renderHome() {
   currentObraId = null;
   // Limpiar tags fijos mobile si existen
-  const mt = document.getElementById('mobile-obra-tags');
-  if (mt) mt.remove();
+  ['mobile-obra-tags','mobile-obra-viewer'].forEach(id => { const el=document.getElementById(id); if(el) el.remove(); });
   document.getElementById('page-title-bar').style.display = 'none';
   document.title = 'MAB - Modern Architecture Browser';
   const g = document.getElementById('gallery');
