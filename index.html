@@ -153,6 +153,7 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
 .cell-autor { font-size: 10px; color: var(--gray-mid); text-transform: uppercase; letter-spacing: .05em; line-height: 1.3; cursor: pointer; }
 .cell-autor:hover { color: var(--black); }
 .cell-nombre { font-size: 11px; color: var(--black); font-weight: 500; line-height: 1.3; }
+.cell-header { min-height: 3em; }
 .gallery-cell {
   display: flex; flex-direction: column;
   cursor: pointer; background: #ffffff;
@@ -421,6 +422,36 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
   .filter-row { grid-template-columns: repeat(3, 1fr); }
   #gallery { grid-template-columns: repeat(2, 1fr); }
 }
+@media (max-width: 768px) {
+  .filter-row { grid-template-columns: repeat(2, 1fr); }
+  #gallery { grid-template-columns: 1fr; }
+  #top-bar { flex-direction: row; flex-wrap: nowrap; padding: 10px 16px 8px; gap: 8px; }
+  #logo { font-size: 13px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #btn-intro { display: none !important; }
+
+  /* MOBILE LIGHTBOX */
+  #lightbox.open { flex-direction: column; }
+  #lb-sidebar { display: none !important; }
+  #lb-close { top: 10px; right: 12px; font-size: 20px; }
+  #lb-img-area { 
+    flex: 1; padding: 0; 
+    display: flex; align-items: center; justify-content: center;
+    padding-bottom: 70px;
+  }
+  #lb-img { max-width: 100%; max-height: calc(100vh - 130px); object-fit: contain; }
+  #mobile-lb-tags {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #fff; border-top: 1px solid #e0e0e0;
+    padding: 10px 12px; z-index: 1000;
+    display: flex; flex-wrap: wrap; gap: 6px; min-height: 60px;
+  }
+
+  /* MOBILE OBRA VIEWER */
+  #mobile-obra-viewer { display: flex; flex-direction: column; height: calc(100vh - 120px); }
+  #mobile-obra-photos { flex: 1; overflow-y: scroll; scroll-snap-type: y mandatory; }
+  #mobile-obra-photos .mob-photo { scroll-snap-align: start; width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; }
+  #mobile-obra-tags { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e0e0e0; padding: 10px 12px; z-index: 200; display: flex; flex-wrap: wrap; gap: 6px; min-height: 60px; }
+}
 </style>
 </head>
 <body>
@@ -491,21 +522,21 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
         <div class="filter-label" onclick="toggleDropdown('complejidad')">Complejidad <span class="active-count" id="ac-complejidad"></span><span class="arrow">⌄</span></div>
         <div class="filter-dropdown" id="fi-complejidad"></div>
       </div>
-      <div class="filter-group filter-type-b" id="fg-material">
-        <div class="filter-label" onclick="toggleDropdown('material')">Material <span class="active-count" id="ac-material"></span><span class="arrow">⌄</span></div>
-        <div class="filter-dropdown" id="fi-material"></div>
+      <div class="filter-group filter-type-b" id="fg-tipoespacial">
+        <div class="filter-label" onclick="toggleDropdown('tipoespacial')">Tip. espacial <span class="active-count" id="ac-tipoespacial"></span><span class="arrow">⌄</span></div>
+        <div class="filter-dropdown" id="fi-tipoespacial"></div>
       </div>
       <div class="filter-group filter-type-b" id="fg-componente">
         <div class="filter-label" onclick="toggleDropdown('componente')">Componente <span class="active-count" id="ac-componente"></span><span class="arrow">⌄</span></div>
         <div class="filter-dropdown" id="fi-componente"></div>
       </div>
+      <div class="filter-group filter-type-b" id="fg-material">
+        <div class="filter-label" onclick="toggleDropdown('material')">Material <span class="active-count" id="ac-material"></span><span class="arrow">⌄</span></div>
+        <div class="filter-dropdown" id="fi-material"></div>
+      </div>
       <div class="filter-group filter-type-b" id="fg-tipografica">
         <div class="filter-label" onclick="toggleDropdown('tipografica')">Tip. gráfica <span class="active-count" id="ac-tipografica"></span><span class="arrow">⌄</span></div>
         <div class="filter-dropdown" id="fi-tipografica"></div>
-      </div>
-      <div class="filter-group filter-type-b" id="fg-tipoespacial">
-        <div class="filter-label" onclick="toggleDropdown('tipoespacial')">Tip. espacial <span class="active-count" id="ac-tipoespacial"></span><span class="arrow">⌄</span></div>
-        <div class="filter-dropdown" id="fi-tipoespacial"></div>
       </div>
     </div>
   </div>
@@ -771,6 +802,9 @@ function obraMatch(o) {
   return true;
 }
 function imgMatch(img) {
+  // Si se filtra por fotografo, excluir dibujos (tipografica no vacio)
+  if (AF.fotografo.length && (img.tipografica||[]).length > 0) return false;
+
   // Filtro tipografica (independiente de elementos)
   if (AF.tipografica.length && !AF.tipografica.some(t => (img.tipografica||[]).includes(t))) return false;
 
@@ -797,14 +831,97 @@ function elemVals(img, campo) {
 // ══════════════════════════════════════════
 //  RENDER HOME
 // ══════════════════════════════════════════
+
+function renderObraMobile(o, g) {
+  // Limpiar tags fijos anteriores
+  const existingTags = document.getElementById('mobile-obra-tags');
+  if (existingTags) existingTags.remove();
+
+  // Contenedor principal
+  const viewer = document.createElement('div');
+  viewer.id = 'mobile-obra-viewer';
+
+  // Fotos con scroll snap
+  const photosEl = document.createElement('div');
+  photosEl.id = 'mobile-obra-photos';
+
+  let imgs = o.imagenes;
+  const hasF = AF.tipografica.length || AF.tipoespacial.length || AF.material.length || AF.componente.length;
+  if (hasF) imgs = imgs.filter(imgMatch);
+  const lbImgsArr = AF.fotografo.length ? imgs.filter(i => (i.tipografica||[]).length === 0) : imgs;
+  lbImages = lbImgsArr.map(i => ({ src: i.src, elementos: i.elementos||[], tipografica: i.tipografica||[], extra: i.extra||[], obra: o }));
+
+  imgs.forEach((img, idx) => {
+    const photo = document.createElement('img');
+    photo.className = 'mob-photo';
+    photo.src = img.src;
+    photo.loading = 'lazy';
+    photo.onclick = () => { lbIdx = idx; lbOpen(idx); };
+    photosEl.appendChild(photo);
+  });
+
+  viewer.appendChild(photosEl);
+  g.appendChild(viewer);
+
+  // Tags fijos abajo — se actualizan con IntersectionObserver
+  const tagsBar = document.createElement('div');
+  tagsBar.id = 'mobile-obra-tags';
+  document.body.appendChild(tagsBar);
+
+  function updateTags(img) {
+    tagsBar.innerHTML = '';
+    const elementos = img.elementos || [];
+    const tags = [
+      ...img.tipografica.map(v => ({k:'tipografica',v})),
+      ...[...new Set(elementos.map(el=>el.tipoespacial).filter(Boolean))].map(v=>({k:'tipoespacial',v})),
+      ...[...new Set(elementos.map(el=>el.componente).filter(Boolean))].map(v=>({k:'componente',v})),
+      ...[...new Set(elementos.map(el=>el.material).filter(Boolean))].map(v=>({k:'material',v})),
+      ...getAutores(o).map(a=>({k:'autor',v:a})),
+      o.pais ? {k:'pais',v:o.pais} : null,
+      o.decada ? {k:'decada',v:o.decada} : null,
+      ...getFotografos(o).filter(f=>f&&f!=='Sin credito').map(f=>({k:'fotografo',v:f})),
+    ].filter(Boolean).slice(0,8);
+    tags.forEach(({k,v}) => {
+      const t = document.createElement('span');
+      t.className = 'tag' + (AF[k]&&AF[k].includes(v) ? ' active' : '');
+      t.setAttribute('data-k', k);
+      t.setAttribute('data-v', v);
+      t.textContent = v;
+      t.onclick = e => { e.stopPropagation(); toggleF(k, v, t); };
+      tagsBar.appendChild(t);
+    });
+  }
+
+  // IntersectionObserver para detectar foto visible
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.intersectionRatio >= 0.5) {
+        const idx = Array.from(photosEl.children).indexOf(entry.target);
+        if (idx >= 0 && idx < imgs.length) updateTags(imgs[idx]);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  Array.from(photosEl.children).forEach(el => observer.observe(el));
+  if (imgs.length > 0) updateTags(imgs[0]);
+}
 function renderHome() {
   currentObraId = null;
+  // Limpiar tags fijos mobile si existen
+  const mt = document.getElementById('mobile-obra-tags');
+  if (mt) mt.remove();
   document.getElementById('page-title-bar').style.display = 'none';
   document.title = 'MAB - Modern Architecture Browser';
   const g = document.getElementById('gallery');
   g.innerHTML = '';
 
-  const hasFiltrosB = AF.tipografica.length || AF.tipoespacial.length || AF.material.length || AF.componente.length;
+  const hasFiltrosB = AF.tipografica.length || AF.tipoespacial.length || AF.material.length || AF.componente.length || AF.fotografo.length;
+
+  // Mobile: 2 columnas si hay filtros activos, 1 columna si no
+  if (window.innerWidth <= 768) {
+    const hayFiltros = Object.values(AF).some(v => v.length > 0);
+    g.style.gridTemplateColumns = hayFiltros ? "repeat(2, 1fr)" : "1fr";
+  }
 
   if (hasFiltrosB) {
     // MODO IMAGEN CRUZADA: mostrar todas las imágenes de todas las obras que cumplan filtros A + B
@@ -933,6 +1050,12 @@ function renderObra(id) {
   const g = document.getElementById('gallery');
   g.innerHTML = '';
 
+  // MOBILE: viewer de scroll con tags fijos
+  if (window.innerWidth <= 768) {
+    renderObraMobile(o, g);
+    return;
+  }
+
   let imgs = o.imagenes;
   const hasF = AF.tipografica.length || AF.tipoespacial.length || AF.material.length || AF.componente.length;
   if (hasF) imgs = imgs.filter(imgMatch);
@@ -956,7 +1079,8 @@ function renderObra(id) {
     return 14;
   };
   imgs = [...imgs].sort((a, b) => escalaFallback(a) - escalaFallback(b));
-  lbImages = imgs.map(i => ({ src: i.src, elementos: i.elementos||[], tipografica: i.tipografica||[], extra: i.extra||[], obra: o })); lbIdx = 0;
+  const lbImgs = AF.fotografo.length ? imgs.filter(i => (i.tipografica||[]).length === 0) : imgs;
+  lbImages = lbImgs.map(i => ({ src: i.src, elementos: i.elementos||[], tipografica: i.tipografica||[], extra: i.extra||[], obra: o })); lbIdx = 0;
 
   imgs.forEach((img, idx) => {
     const cell = mkCell(img.src, '', () => lbOpen(idx));
@@ -1432,6 +1556,8 @@ function enterBrowser(obraId) {
 }
 
 function initIntro() {
+  // En mobile ir directo al buscador
+  if (window.innerWidth <= 768) { enterBrowser(null); return; }
   // Si hay parámetros en la URL, ir directo al buscador
   if (window.location.search) { enterBrowser(null); return; }
   if (typeof OBRAS === 'undefined' || !OBRAS || !OBRAS.length) { enterBrowser(); return; }
@@ -1596,6 +1722,26 @@ function lbShow(item) {
   g.className = 'lb-tag-group';
   allTags.forEach(([l,k,v]) => g.appendChild(makeTag(l,k,v)));
   sidebar.appendChild(g);
+
+  // MOBILE: tags fijos abajo
+  if (window.innerWidth <= 768) {
+    let mobileBar = document.getElementById('mobile-lb-tags');
+    if (!mobileBar) {
+      mobileBar = document.createElement('div');
+      mobileBar.id = 'mobile-lb-tags';
+      document.body.appendChild(mobileBar);
+    }
+    mobileBar.innerHTML = '';
+    allTags.slice(0, 8).forEach(([l, k, v]) => {
+      const t = document.createElement('span');
+      t.className = 'tag' + (AF[k] && AF[k].includes(v) ? ' active' : '');
+      t.setAttribute('data-k', k);
+      t.setAttribute('data-v', v);
+      t.textContent = l;
+      t.onclick = e => { e.stopPropagation(); toggleF(k, v, t); };
+      mobileBar.appendChild(t);
+    });
+  }
 }
 function lbOpen(idx) {
   lbIdx = idx;
@@ -1604,7 +1750,7 @@ function lbOpen(idx) {
 }
 function lbNext() { lbIdx = (lbIdx+1) % lbImages.length; lbShow(lbImages[lbIdx]); }
 function lbPrev() { lbIdx = (lbIdx-1+lbImages.length) % lbImages.length; lbShow(lbImages[lbIdx]); }
-function lbClose(e) { e.stopPropagation(); document.getElementById('lightbox').classList.remove('open'); const vid = document.getElementById('lb-video'); vid.pause(); vid.src=''; }
+function lbClose(e) { e.stopPropagation(); document.getElementById('lightbox').classList.remove('open'); const vid = document.getElementById('lb-video'); vid.pause(); vid.src=''; const mlt = document.getElementById('mobile-lb-tags'); if (mlt) mlt.remove(); }
 
 document.addEventListener('keydown', e => {
   const popup = document.getElementById('lb-popup');
@@ -1635,7 +1781,7 @@ function lbPopupOpen(k, v) {
       else if (k === 'ciudad') match = obra.ciudad === v;
       else if (k === 'decada') match = obra.decada === v;
       else if (k === 'anio') match = String(obra.anio) === v;
-      else if (k === 'fotografo') match = getFotografos(obra).includes(v);
+      else if (k === 'fotografo') match = getFotografos(obra).includes(v) && (img.tipografica||[]).length === 0;
       else if (k === 'complejidad') match = obra.complejidad === v;
       if (match) results.push({ img, obra });
     });
