@@ -454,10 +454,7 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
   /* MOBILE OBRA VIEWER */
   #mobile-obra-viewer { position: fixed; top: 56px; left: 0; right: 0; bottom: 90px; z-index: 10; background: #fff; }
   #mobile-obra-photos { position: absolute; inset: 0; display: flex; overflow-x: scroll; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
-  #mobile-obra-photos .mob-photo { scroll-snap-align: start; flex: 0 0 100%; width: 100%; height: auto; object-fit: none; display: block; background: #fff; }
-  #mobile-obra-dots { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; z-index: 20; pointer-events: none; }
-  #mobile-obra-dots .dot { width: 6px; height: 6px; border-radius: 50%; background: #ccc; transition: background 0.2s; }
-  #mobile-obra-dots .dot.active { background: #000; }
+  #mobile-obra-photos .mob-photo { scroll-snap-align: start; flex: 0 0 100%; width: 100%; height: auto; max-height: calc(100vh - 180px); object-fit: contain; display: block; background: #fff; }
   #mobile-obra-tags { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e0e0e0; padding: 6px 8px; z-index: 200; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; height: 90px; box-sizing: border-box; }
   #gallery { padding-bottom: 0; }
 }
@@ -866,16 +863,6 @@ function renderObraMobile(o, g) {
   });
   viewer.appendChild(photosEl);
 
-  // Dots indicadores (max 20 para no saturar)
-  const dotsEl = document.createElement('div');
-  dotsEl.id = 'mobile-obra-dots';
-  const maxDots = Math.min(imgs.length, 20);
-  for (let i=0; i<maxDots; i++) {
-    const d = document.createElement('div');
-    d.className = 'dot' + (i===0 ? ' active' : '');
-    dotsEl.appendChild(d);
-  }
-  viewer.appendChild(dotsEl);
   document.body.appendChild(viewer);
 
   // Tags fijos abajo
@@ -886,8 +873,6 @@ function renderObraMobile(o, g) {
   function updateView(idx) {
     const img = imgs[idx];
     if (!img) return;
-    // Actualizar dots
-    dotsEl.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i===idx));
     // Actualizar tags
     tagsBar.innerHTML = '';
     const elementos = img.elementos || [];
