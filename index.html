@@ -1,5 +1,33 @@
 <!DOCTYPE html>
 <html lang="es">
+<!--
+═══════════════════════════════════════════════════════════════
+  MAB — CONTROL DE VERSIÓN OBLIGATORIO PARA CLAUDE
+═══════════════════════════════════════════════════════════════
+  ANTES DE EDITAR ESTE ARCHIVO, CLAUDE DEBE:
+
+  1. LEER el historial del chat activo para identificar cuál fue
+     el ÚLTIMO archivo entregado al usuario (outputs).
+
+  2. PARTIR SIEMPRE del último output entregado, NUNCA del
+     archivo original del proyecto (/mnt/project/).
+
+  3. VERIFICAR que todos los fixes anteriores están presentes
+     antes de agregar uno nuevo. Checklist mínimo:
+
+     [ ] extra-tag-bar (tag cloud fallback con título + ✕)
+     [ ] resetAll limpia searchQuery y llama hideExtraTagBar()
+     [ ] lbBboxShow / lbBboxClear (highlight bbox en lightbox)
+     [ ] Canvas #lb-bbox-canvas en el HTML del lightbox
+     [ ] CSS #extra-tag-bar, #lb-bbox-canvas.active
+
+  4. NUNCA sobreescribir un output sin haber verificado el punto 3.
+
+  ARCHIVO ACTUAL: MAB_CLAUDE_08.html
+  UPLOADER ACTUAL: mab_uploader.py (con USE_BBOX + fix décadas)
+  OBRAS ACTUAL: obras.js (con "1970s" corregido)
+═══════════════════════════════════════════════════════════════
+-->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -28,7 +56,7 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
 }
 #top-bar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 24px 10px;
+  padding: 14px 24px 6px;
 }
 #logo {
   font-family: Helvetica, Arial, sans-serif; font-weight: 300; font-size: 18px; letter-spacing: 0.03em; text-transform: uppercase;
@@ -38,14 +66,64 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
 
 
 #top-btns { display: flex; gap: 6px; align-items: center; }
-#btn-reset, #share-btn, #btn-intro {
+#btn-reset, #share-btn, #btn-intro, #btn-search {
   font-family: var(--font-mono); font-size: 14px;
   border: var(--border); background: transparent;
   color: var(--gray-dark); padding: 3px 8px; cursor: pointer; transition: all .15s;
   line-height: 1; display: flex; align-items: center; justify-content: center;
   width: 32px; height: 32px;
 }
-#btn-reset:hover, #share-btn:hover, #btn-intro:hover { background: var(--black); color: var(--white); border-color: var(--black); }
+#btn-reset:hover, #share-btn:hover, #btn-intro:hover, #btn-search:hover { background: var(--black); color: var(--white); border-color: var(--black); }
+#btn-search.active { background: var(--black); color: var(--white); border-color: var(--black); }
+
+/* BUSCADOR */
+/* SEARCH PANEL — fullscreen nube de tags */
+#search-bar {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: #fff; z-index: 500; flex-direction: column;
+  padding: 14px 24px 40px; overflow-y: auto; box-sizing: border-box;
+}
+#search-bar.open { display: flex; }
+#search-input-wrap {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0; margin-bottom: 14px;
+}
+#search-input {
+  flex: 1; max-width: 480px; height: 32px;
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: .05em; text-transform: uppercase;
+  border: 1px solid #c8c8c8; padding: 0 10px;
+  outline: none; box-shadow: none; -webkit-appearance: none;
+  color: var(--black); background: #fff;
+}
+#search-count {
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--gray-mid); white-space: nowrap;
+}
+#search-clear {
+  font-family: var(--font-mono); font-size: 13px;
+  border: 1px solid #c8c8c8; background: transparent;
+  color: var(--gray-dark); cursor: pointer;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all .15s; margin-left: auto;
+}
+#search-clear:hover { background: var(--black); color: #fff; border-color: var(--black); }
+#search-tag-cloud {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 4px; align-content: start;
+}
+.stag {
+  font-family: var(--font-mono);
+  font-size: 8px; letter-spacing: .05em; text-transform: uppercase;
+  border: var(--border); padding: 5px 4px; cursor: pointer; user-select: none;
+  color: var(--gray-dark); background: #fff; transition: all .1s;
+  text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  box-sizing: border-box; width: 100%;
+}
+.stag:hover { background: var(--black); color: #fff; border-color: var(--black); }
 
 /* ESTADO BUTTON — cuadrado 32x32 con símbolo, igual al resto */
 #estado-btn-group { position: relative; }
@@ -143,6 +221,18 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
 .obra-fuente-link:hover { color: var(--black); }
 #back-btn { cursor: pointer; margin-right: 12px; }
 #back-btn:hover { color: var(--black); }
+
+#extra-tag-bar {
+  padding: 5px 24px 7px; align-items: center; gap: 10px;
+  font-size: 9.5px; letter-spacing: 0.1em;
+  border-top: 1px solid var(--gray-light);
+}
+#extra-tag-label { color: var(--black); text-transform: uppercase; }
+#extra-tag-close {
+  background: none; border: none; cursor: pointer;
+  font-size: 10px; color: var(--gray-mid); padding: 0 2px; line-height: 1;
+}
+#extra-tag-close:hover { color: var(--black); }
 
 /* CONTENIDO */
 #main-content { padding: 0 24px 60px; }
@@ -332,7 +422,13 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
 #lb-img-area {
   flex: 1; display: flex; align-items: center; justify-content: center;
   cursor: pointer; overflow: hidden; padding: 48px 24px 48px 24px;
+  position: relative;
 }
+#lb-bbox-canvas {
+  position: absolute; pointer-events: none;
+  opacity: 0; transition: opacity 0.2s ease;
+}
+#lb-bbox-canvas.active { opacity: 1; }
 #lightbox img, #lightbox video {
   max-width: 100%; max-height: 100%;
   object-fit: contain; user-select: none;
@@ -358,6 +454,20 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
   flex-direction: column;
   height: 100%;
 }
+#lb-obra-titulo {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--black);
+  font-weight: 500;
+  margin-bottom: 14px;
+  line-height: 1.4;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+#lb-obra-titulo:hover { text-decoration: underline; text-underline-offset: 2px; }
 #lb-sidebar .lb-tag-group { display: contents; }
 #lb-sidebar .lb-tag-group-label { display: none; }
 #lb-sidebar .lb-tag {
@@ -481,17 +591,26 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
 
 <header id="site-header">
   <div id="top-bar">
-    <div id="logo" onclick="goHome()">MAB<span id="logo-full"> - Modern Architecture Browser</span></div>
+    <div id="logo" onclick="goIntro()">MAB<span id="logo-full"><span style="letter-spacing:0;margin:0 5px">-</span>MODERN ARCHITECTURE BROWSER</span></div>
     <div id="top-btns">
       <!-- ESTADO: botón desplegable independiente del grid -->
       <div id="estado-btn-group">
         <button id="btn-estado" onclick="toggleEstado()" title="Filtrar por estado de obra">◉</button>
         <div id="fi-estado"></div>
       </div>
-      <button id="btn-intro" onclick="goIntro()" title="Inicio">⊙</button>
-      <button id="btn-reset" onclick="resetAll()" title="Limpiar filtros">↺</button>
+            <button id="btn-reset" onclick="resetAll()" title="Limpiar filtros">↺</button>
       <button id="share-btn" onclick="shareFilters()" title="Compartir selección">⇪</button>
+      <button id="btn-search" onclick="toggleSearch()" title="Buscar">⌕</button>
     </div>
+  </div>
+
+  <div id="search-bar">
+    <div id="search-input-wrap">
+      <input id="search-input" type="text" placeholder="Filtrar tags…" oninput="filterTagCloud(this.value)" autocomplete="off" />
+      <span id="search-count"></span>
+      <button id="search-clear" onclick="toggleSearch()">✕</button>
+    </div>
+    <div id="search-tag-cloud"></div>
   </div>
 
   <div id="filters-wrapper">
@@ -508,9 +627,9 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
         <div class="filter-label" onclick="toggleDropdown('pais')">País <span class="active-count" id="ac-pais"></span><span class="arrow">⌄</span></div>
         <div class="filter-dropdown" id="fi-pais"></div>
       </div>
-      <div class="filter-group" id="fg-ciudad">
-        <div class="filter-label" onclick="toggleDropdown('ciudad')">Ciudad <span class="active-count" id="ac-ciudad"></span><span class="arrow">⌄</span></div>
-        <div class="filter-dropdown" id="fi-ciudad"></div>
+      <div class="filter-group" id="fg-region">
+        <div class="filter-label" onclick="toggleDropdown('region')">Ciudad <span class="active-count" id="ac-region"></span><span class="arrow">⌄</span></div>
+        <div class="filter-dropdown" id="fi-region"></div>
       </div>
       <div class="filter-group" id="fg-decada">
         <div class="filter-label" onclick="toggleDropdown('decada')">Década <span class="active-count" id="ac-decada"></span><span class="arrow">⌄</span></div>
@@ -554,6 +673,11 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
     <span id="obra-title-text"></span>
   </div>
 
+  <div id="extra-tag-bar" style="display:none;">
+    <span id="extra-tag-label"></span>
+    <button id="extra-tag-close" onclick="clearExtraTag()">&#x2715;</button>
+  </div>
+
 </header>
 
 <main id="main-content">
@@ -569,6 +693,7 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
   </div>
   <div id="lb-img-area" onclick="lbNext()">
     <img id="lb-img" src="" alt="">
+    <canvas id="lb-bbox-canvas"></canvas>
     <video id="lb-video" controls autoplay loop style="display:none;max-width:100%;max-height:100%;cursor:pointer;" onclick="lbNext()"></video>
   </div>
 </div>
@@ -590,7 +715,7 @@ body { font-family: var(--font-mono); background: #ffffff; color: var(--black); 
 
 // ── JERARQUÍA USO ─────────────────────────────────────────
 const USO_JERARQUIA = {
-  "Residencia":                ["Cabaña","Casa unifamiliar","Edificio de vivienda","Loft","Refugio","Vivienda colectiva","Vivienda social"],
+  "Residencia":                ["Cabaña","Vivienda unifamiliar","Edificio de vivienda","Loft","Refugio","Vivienda colectiva","Vivienda social"],
   "Educación":                 ["Aula magna","Campus universitario","Escuela primaria","Escuela secundaria","Facultad","Instituto técnico","Jardín de infantes","Universidad"],
   "Cultura":                   ["Archivo","Auditorio","Biblioteca","Centro cultural","Cinema","Fundación","Museo","Sala de exposiciones","Teatro"],
   "Religión":                  ["Capilla","Catedral","Cementerio","Crematorio","Iglesia","Mezquita","Sinagoga"],
@@ -613,7 +738,7 @@ function usoExpand(tag) {
   if (USO_JERARQUIA[tag]) return [tag, ...USO_JERARQUIA[tag]];
   return [tag];
 }
-const AF = { autor:[], estado:[], uso:[], pais:[], ciudad:[], decada:[], anio:[], fotografo:[], complejidad:[], material:[], componente:[], tipografica:[], tipoespacial:[] };
+const AF = { autor:[], estado:[], uso:[], pais:[], region:[], ciudad:[], decada:[], anio:[], fotografo:[], complejidad:[], material:[], componente:[], tipografica:[], tipoespacial:[] };
 let currentObraId = null;
 let lbImages = []; // array of {src, elementos, tipografica, extra, obra}
 let lbIdx = 0;
@@ -663,10 +788,19 @@ function toggleDropdown(key) {
   if (!wasOpen) {
     dd.classList.add('open');
     lbl.classList.add('open');
-    // Calcular columnas después de que el dropdown sea visible
+    // Reordenar: activos primero
+    const active = AF[key] || [];
+    const tags = [...dd.querySelectorAll('.tag')];
+    tags.sort((a, b) => {
+      const aA = active.includes(a.dataset.v), bA = active.includes(b.dataset.v);
+      return aA === bA ? 0 : aA ? -1 : 1;
+    });
+    tags.forEach(t => dd.appendChild(t));
     requestAnimationFrame(() => {
       const cols = calcDropdownCols(dd);
       dd.style.setProperty('--dd-cols', cols);
+      const inp = dd.querySelector('input');
+      if (inp) inp.focus();
     });
   }
 }
@@ -703,22 +837,22 @@ function buildTags() {
   const sets = {
     autor:       [...new Set(OBRAS.flatMap(o => getAutores(o)))].sort(),
     pais:        [...new Set(OBRAS.map(o => o.pais))].sort(),
-    ciudad:      [...new Set(OBRAS.map(o => o.ciudad))].sort(),
+    region:      [...new Set(OBRAS.flatMap(o => o.region && o.region !== o.ciudad ? [o.ciudad, o.region] : [o.ciudad]))].sort(),
     decada:      [...new Set(OBRAS.map(o => o.decada))].sort(),
     anio:        [...new Set(OBRAS.map(o => String(o.anio)))].sort(),
     fotografo:   allFotografos,
     complejidad: ["Nivel 1","Nivel 2","Nivel 3","Nivel 4","Nivel 5"],
     uso:         USO_TODOS,
-    material: ["Acero","Acero corten","Acero inoxidable","Adobe","Aluminio","Arenisca","Bambu","Bronce","CLT","Caliza","Ceramica","Cobre","Tierra compactada","Granito","Hierro","Hormigon","Ladrillo","Madera laminada","Madera maciza","Membrana ETFE","PVC","Piedra","Pizarra","Policarbonato","Porcelana","Terracota","Titanio","Vidrio","Vidrio laminado","Vidrio templado","Yeso","Zinc"],
+    material: ["Acero","Acero corten","Acero inoxidable","Adobe","Acrilico","Aluminio","Arenisca","Bambu","Bronce","CLT","Caliza","Canamo","Ceramica","Cobre","Cemento","Corcho","Fibra de carbono","Fibra de vidrio","Geotextil","Granito","Hierro","Hormigon","Ladrillo","Madera laminada","Madera maciza","MDF","Membrana ETFE","Membrana tensada","Mortero","OSB","Paja","Piedra","Pizarra","Policarbonato","Porcelana","PVC","Resinas","Tela asfaltica","Terciado","Terracota","Tierra compactada","Titanio","Vidrio","Vidrio estructural","Vidrio laminado","Vidrio templado","Yeso","Zinc"],
     componente:  ["Aire acondicionado","Artefacto sanitario","Ascensor","Barandilla","Canaleta","Carpinteria","Cerco","Cielorraso","Columna","Cubierta","Entrepiso","Escalera","Estructura","Fachada ventilada","Griferia","Hogar","Iluminacion","Instalacion de incendio","Instalacion pluvial","Lucarna","Manija","Marquesina","Muro compuesto","Muro opaco","Muro translucido","Muro transparente","Panel","Parasol","Parrilla","Persiana","Piso","Porton","Postigo","Puerta","Rampa","Revestimiento","Senaletica","Toldo","Viga"],
-    tipografica: ["Axonometria","Corte","Despiece","Detalle constructivo","Foto de maqueta","Fotomontaje","Maqueta","Maqueta virtual","Perfil urbano","Perspectiva exterior","Perspectiva interior","Planimetria","Planta","Render exterior","Render interior","Vista"],
+    tipografica: ["Axonometria","Corte","Despiece","Detalle constructivo","Fotomontaje","Maqueta","Perfil urbano","Perspectiva exterior","Perspectiva interior","Planimetria","Planta","Vista"],
     tipoespacial: ["Aula","Auditorio","Baño","Biblioteca","Calle","Cocina","Comedor","Consultorio","Deposito","Dormitorio","Espacio deportivo","Espacio industrial","Estacionamiento","Estar","Foyer","Galeria","Garaje cubierto","Hall de ingreso","Invernadero","Jardin","Lobby","Oficina","Patio","Piscina cubierta","Plaza","Sala de espera","Sala de lectura","Sala de reuniones","Showroom","Terraza","Vereda","Vestuario"]
   };
 
   // Poblar estado (botón separado)
   const estEl = document.getElementById('fi-estado');
   if (estEl) {
-    ["Construido","No construido","Demolido","Restaurado","Reconstruido"].forEach(v => {
+    ["Construido","No construido","Demolido","Restaurado","Reconstruido","Ampliacion"].forEach(v => {
       const t = document.createElement('span');
       t.className = 'tag'; t.textContent = v;
       t.dataset.k = 'estado'; t.dataset.v = v;
@@ -749,10 +883,16 @@ function buildTags() {
       });
     };
     el.appendChild(inp);
-    vals.forEach(v => {
+    const active = AF[key] || [];
+    const sorted = [...vals].sort((a, b) => {
+      const aA = active.includes(a), bA = active.includes(b);
+      return aA === bA ? 0 : aA ? -1 : 1;
+    });
+    sorted.forEach(v => {
       if (!v || v === '—') return;
       const t = document.createElement('span');
       t.className = 'tag'; t.textContent = v;
+      if (active.includes(v)) t.classList.add('active');
       t.dataset.k = key; t.dataset.v = v;
       t.onclick = () => toggleF(key, v, t);
       el.appendChild(t);
@@ -784,6 +924,8 @@ function resetAll() {
   document.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
   Object.keys(AF).forEach(k => updateActiveCount(k));
   closeAllDropdowns();
+  searchQuery = '';
+  hideExtraTagBar();
   currentObraId ? renderObra(currentObraId) : renderHome();
 }
 
@@ -792,14 +934,19 @@ function resetAll() {
 // ══════════════════════════════════════════
 function obraMatch(o) {
   if (AF.autor.length && !AF.autor.some(a => getAutores(o).includes(a))) return false;
-  if (AF.estado.length && !AF.estado.includes(o.estado)) return false;
+  if (AF.estado.length) {
+    // "Construido" expande a todos los estados construidos
+    const estadoExpand = (s) => s === 'Construido' ? ['Construido','Demolido','Restaurado','Reconstruido'] : [s];
+    const estadosExpanded = [...new Set(AF.estado.flatMap(estadoExpand))];
+    if (!estadosExpanded.includes(o.estado)) return false;
+  }
   if (AF.uso.length) {
     // Expandir cada tag activo: si es categoría incluye todos sus subtipos
     const expanded = [...new Set(AF.uso.flatMap(t => usoExpand(t)))];
     if (!expanded.includes(o.uso)) return false;
   }
   if (AF.pais.length && !AF.pais.includes(o.pais)) return false;
-  if (AF.ciudad.length && !AF.ciudad.includes(o.ciudad)) return false;
+  if (AF.region.length && !AF.region.includes(o.ciudad) && !AF.region.includes(o.region)) return false;
   if (AF.decada.length && !AF.decada.includes(o.decada)) return false;
   if (AF.anio.length && !AF.anio.includes(String(o.anio))) return false;
   if (AF.fotografo.length && !AF.fotografo.some(f => getFotografos(o).includes(f))) return false;
@@ -840,6 +987,23 @@ function elemVals(img, campo) {
 //  RENDER HOME
 // ══════════════════════════════════════════
 
+function escalaFallback(i) {
+  if (i.escala) return i.escala;
+  if (!i.tipografica || !i.tipografica.length) return 3;
+  const t = i.tipografica[0] || '';
+  if (t === 'Planimetria' || t === 'Perfil urbano')   return 7;
+  if (t === 'Planta')                                  return 9;
+  if (t === 'Corte')                                   return 10;
+  if (t === 'Vista')                                   return 11;
+  if (t === 'Axonometria')                             return 12;
+  if (t === 'Detalle constructivo' || t === 'Despiece')return 13;
+  if (t === 'Render exterior' || t === 'Perspectiva exterior' || t === 'Fotomontaje') return 15.2;
+  if (t === 'Render interior' || t === 'Perspectiva interior') return 15.4;
+  if (t === 'Maqueta virtual') return 15.8;
+  if (t === 'Foto de maqueta' || t === 'Maqueta')       return 16;
+  return 14;
+}
+
 function renderObraMobile(o, g) {
   // Limpiar elementos previos
   ['mobile-obra-tags','mobile-obra-viewer'].forEach(id => { const el=document.getElementById(id); if(el) el.remove(); });
@@ -847,6 +1011,7 @@ function renderObraMobile(o, g) {
   let imgs = o.imagenes;
   const hasF = AF.tipografica.length || AF.tipoespacial.length || AF.material.length || AF.componente.length;
   if (hasF) imgs = imgs.filter(imgMatch);
+  imgs = [...imgs].sort((a, b) => escalaFallback(a) - escalaFallback(b));
   lbImages = imgs.map(i => ({ src: i.src, elementos: i.elementos||[], tipografica: i.tipografica||[], extra: i.extra||[], obra: o }));
 
   // Viewer fijo
@@ -931,9 +1096,68 @@ function renderHome() {
     g.style.gridTemplateColumns = hayFiltros ? "repeat(2, 1fr)" : "1fr";
   }
 
+  // Aplicar búsqueda de texto libre
+  const obrasBase = searchQuery ? OBRAS.filter(obraMatchesSearch) : OBRAS;
+
+  // MODO BÚSQUEDA: mostrar imágenes individuales que contienen el término
+  if (searchQuery) {
+    const terms = searchQuery.split(/\s+/).filter(Boolean);
+    const resultados = [];
+    obrasBase.forEach(o => {
+      o.imagenes.forEach(img => {
+        // Construir haystack por imagen
+        let h = [
+          o.nombre||'', ...(Array.isArray(o.autor)?o.autor:[o.autor||'']),
+          o.ciudad||'', o.pais||'', o.uso||'', String(o.anio||''), o.decada||'', o.estado||''
+        ].join(' ').toLowerCase();
+        if (img.extra) h += ' ' + img.extra.join(' ').toLowerCase();
+        if (img.tipografica) h += ' ' + img.tipografica.join(' ').toLowerCase();
+        if (img.elementos) img.elementos.forEach(el => {
+          h += ' ' + (el.tipoespacial||'') + ' ' + (el.material||'') + ' ' + (el.componente||'');
+        });
+        if (terms.every(t => h.includes(t))) {
+          resultados.push({ img, obra: o });
+        }
+      });
+    });
+
+    const count = resultados.length;
+    document.getElementById('search-count').textContent = count + ' imagen' + (count !== 1 ? 'es' : '');
+
+    if (!count) {
+      g.innerHTML = '<div id="empty-state" style="display:block">No se encontraron resultados para "' + searchQuery + '"</div>';
+      return;
+    }
+
+    lbImages = resultados.map(x => ({ src: x.img.src, elementos: x.img.elementos||[], tipografica: x.img.tipografica||[], extra: x.img.extra||[], obra: x.obra }));
+    lbIdx = 0;
+
+    resultados.forEach(({ img, obra }, idx) => {
+      const cell = mkCell(img.src, getAutores(obra).join(' + '), () => lbOpen(idx), getAutores(obra), obra.nombre);
+      const tagsB = [
+        ...( img.tipografica||[]).map(v=>({k:'tipografica',v})),
+        ...elemVals(img,'tipoespacial').map(v=>({k:'tipoespacial',v})),
+        ...elemVals(img,'material').map(v=>({k:'material',v})),
+        ...elemVals(img,'componente').map(v=>({k:'componente',v})),
+        ...(img.extra||[]).slice(0,3).map(v=>({k:'extra',v})),
+      ].filter(x=>x.v);
+      const tagsA = [
+        ...getAutores(obra).map(a=>({k:'autor',v:a})),
+        {k:'uso',v:obra.uso},{k:'pais',v:obra.pais},{k:'region',v:obra.ciudad}
+      ].filter(x=>x.v);
+      const combined = [...tagsB];
+      for (const a of tagsA) { if (combined.length >= 8) break; combined.push(a); }
+      cell.appendChild(mkTagsDiv8(combined));
+      g.appendChild(cell);
+    });
+    return;
+  }
+
+  document.getElementById('search-count').textContent = '';
+
   if (hasFiltrosB) {
     // MODO IMAGEN CRUZADA: mostrar todas las imágenes de todas las obras que cumplan filtros A + B
-    const obrasVisibles = OBRAS.filter(obraMatch);
+    const obrasVisibles = obrasBase.filter(obraMatch);
     const todasLasImagenes = [];
     obrasVisibles.forEach(o => {
       o.imagenes.filter(imgMatch).forEach(img => {
@@ -981,7 +1205,7 @@ function renderHome() {
       const tagsA = [
         ...getAutores(obra).map(a=>({k:'autor',v:a})),
         {k:'uso', v:obra.uso}, {k:'pais', v:obra.pais},
-        {k:'ciudad', v:obra.ciudad}, {k:'decada', v:obra.decada}, {k:'anio', v:String(obra.anio)},
+        {k:'region', v:obra.ciudad}, {k:'decada', v:obra.decada}, {k:'anio', v:String(obra.anio)},
         ...getFotografos(obra).filter(f=>f&&f!=='Sin crédito').map(f=>({k:'fotografo',v:f})),
         {k:'complejidad', v:obra.complejidad}
       ].filter(x => x.v && x.v !== 'Sin datos');
@@ -993,7 +1217,7 @@ function renderHome() {
 
   } else {
     // MODO CARÁTULAS: mostrar una carátula por obra (última obra primero)
-    const vis = [...OBRAS].filter(obraMatch);
+    const vis = [...obrasBase].filter(obraMatch);
     if (!vis.length) {
       g.innerHTML = '<div id="empty-state" style="display:block">No se encontraron obras con los filtros seleccionados</div>';
       return;
@@ -1005,7 +1229,7 @@ function renderHome() {
       const tagData = [
         ...getAutores(o).map(a=>({k:'autor',v:a})),
         {k:'uso', v:o.uso}, {k:'pais', v:o.pais},
-        {k:'ciudad', v:o.ciudad}, {k:'decada', v:o.decada}, {k:'anio', v:String(o.anio)},
+        {k:'region', v:o.ciudad}, {k:'decada', v:o.decada}, {k:'anio', v:String(o.anio)},
         ...getFotografos(o).filter(f=>f&&f!=='Sin crédito').map(f=>({k:'fotografo',v:f})),
         {k:'complejidad', v:o.complejidad}
       ];
@@ -1020,6 +1244,7 @@ function renderHome() {
 //  RENDER OBRA
 // ══════════════════════════════════════════
 function renderObra(id) {
+  window.scrollTo(0, 0);
   currentObraId = id;
   const o = OBRAS.find(x => x.id === id);
   document.getElementById('page-title-bar').style.display = 'flex';
@@ -1070,22 +1295,7 @@ function renderObra(id) {
 
   if (!imgs.length) { g.innerHTML = '<div id="empty-state" style="display:block">Sin imágenes para los filtros activos</div>'; return; }
 
-  // Orden por campo escala (1-16)
-  // Sin escala: fotos sin tipografica → 3, dibujos → inferir por tipo
-  const escalaFallback = i => {
-    if (i.escala) return i.escala;
-    if (!i.tipografica || !i.tipografica.length) return 3; // foto sin clasificar
-    const t = i.tipografica[0] || '';
-    if (t === 'Planimetria' || t === 'Perfil urbano')   return 7;
-    if (t === 'Planta')                                  return 9;
-    if (t === 'Corte')                                   return 10;
-    if (t === 'Vista')                                   return 11;
-    if (t === 'Axonometria')                             return 12;
-    if (t === 'Detalle constructivo' || t === 'Despiece')return 13;
-    if (t === 'Render interior' || t === 'Render exterior' || t === 'Perspectiva interior' || t === 'Perspectiva exterior' || t === 'Fotomontaje' || t === 'Maqueta virtual') return 15;
-    if (t === 'Foto de maqueta' || t === 'Maqueta')       return 16;
-    return 14;
-  };
+  // Orden por campo escala (1-16) — usa escalaFallback global
   imgs = [...imgs].sort((a, b) => escalaFallback(a) - escalaFallback(b));
   const lbImgs = AF.fotografo.length ? imgs.filter(i => (i.tipografica||[]).length === 0) : imgs;
   lbImages = lbImgs.map(i => ({ src: i.src, elementos: i.elementos||[], tipografica: i.tipografica||[], extra: i.extra||[], obra: o })); lbIdx = 0;
@@ -1103,7 +1313,7 @@ function renderObra(id) {
     const tagsA = [
       ...getAutores(o).map(a=>({k:'autor',v:a})),
       {k:'uso', v:o.uso}, {k:'pais', v:o.pais},
-      {k:'ciudad', v:o.ciudad}, {k:'decada', v:o.decada}, {k:'anio', v:String(o.anio)},
+      {k:'region', v:o.ciudad}, {k:'decada', v:o.decada}, {k:'anio', v:String(o.anio)},
       ...getFotografos(o).filter(f=>f&&f!=='Sin crédito').map(f=>({k:'fotografo',v:f})),
       {k:'complejidad', v:o.complejidad}
     ].filter(x => x.v && x.v !== '—');
@@ -1283,7 +1493,7 @@ function buildIntroPool(callback) {
     if (!o.cover) return;
     const t = new Image();
     t.onload = () => {
-      if (t.naturalWidth >= 300 && t.naturalHeight >= 200 &&
+      if (t.naturalWidth >= 1000 && t.naturalHeight >= 200 &&
           t.naturalWidth / t.naturalHeight >= 1.4) {
         fastSeed.push({ src: o.cover, obra: o, img: o.imagenes[0] || {} });
       }
@@ -1313,7 +1523,7 @@ function buildIntroPool(callback) {
     const t = new Image();
     t.onload = () => {
       // Ignorar imágenes placeholder de Drive (borradas)
-      if (t.naturalWidth >= 300 && t.naturalHeight >= 200 &&
+      if (t.naturalWidth >= 1000 && t.naturalHeight >= 200 &&
           t.naturalWidth / t.naturalHeight >= 1.4) {
         horizontales.push(item);
       }
@@ -1381,7 +1591,7 @@ function updateIntroMeta(item) {
     ...getAutores(item.obra).map(a => ({ k: 'autor', v: fallback(a, 'Sin datos') })),
     { k: 'uso',        v: fallback(item.obra.uso,        'Sin datos') },
     { k: 'pais',       v: fallback(item.obra.pais,       'Sin datos') },
-    { k: 'ciudad',     v: fallback(item.obra.ciudad,     'Sin datos') },
+    { k: 'region',     v: fallback(item.obra.ciudad,     'Sin datos') },
     { k: 'decada',     v: fallback(item.obra.decada,     'Sin datos') },
     { k: 'anio',       v: fallback(item.obra.anio ? String(item.obra.anio) : null, 'Sin datos') },
     ...getFotografos(item.obra).filter(f=>f&&f!=='Sin crédito').map(f => ({ k: 'fotografo', v: f })),
@@ -1458,13 +1668,13 @@ function getFilterValues(k) {
   // Obtener todos los valores únicos del filtro k de OBRAS
   const vals = new Set();
   OBRAS.forEach(o => {
-    if (k === 'autor') vals.add(o.autor);
+    if (k === 'autor') getAutores(o).forEach(v => vals.add(v));
     else if (k === 'estado') vals.add(o.estado);
     else if (k === 'pais') vals.add(o.pais);
-    else if (k === 'ciudad') vals.add(o.ciudad);
+    else if (k === 'region') { vals.add(o.ciudad); if (o.region && o.region !== o.ciudad) vals.add(o.region); }
     else if (k === 'decada') vals.add(o.decada);
     else if (k === 'anio') vals.add(String(o.anio));
-    else if (k === 'fotografo') vals.add(o.fotografo);
+    else if (k === 'fotografo') getFotografos(o).filter(f => f && f !== 'Sin crédito').forEach(v => vals.add(v));
     else if (k === 'complejidad') vals.add(o.complejidad);
     else o.imagenes.forEach(img => {
       elemVals(img,'material').forEach(v => vals.add(v));
@@ -1616,8 +1826,10 @@ function loadFiltersFromURL() {
     });
   });
   const obra = params.get('obra');
-  if (obra) { renderObra(obra); return; }
-  renderHome();
+  if (obra) { enterBrowser(obra); return; }
+  // Si hay filtros activos ir al buscador, si no dejar que initIntro maneje
+  const hayFiltros = Object.values(AF).some(v => v.length > 0);
+  if (hayFiltros) { enterBrowser(null); return; }
 }
 
 function goHome() {
@@ -1689,6 +1901,16 @@ function lbShow(item) {
       };
       t.dataset.k = k; t.dataset.v = v;
     }
+    // BBOX highlight — solo para material y componente
+    if ((k === 'material' || k === 'componente') && v) {
+      const bboxes = elementos
+        .filter(el => el[k] === v && el.bbox && el.bbox.length === 4)
+        .map(el => el.bbox);
+      if (bboxes.length > 0) {
+        t.addEventListener('mouseenter', () => lbBboxShow(bboxes));
+        t.addEventListener('mouseleave', () => lbBboxClear());
+      }
+    }
     return t;
   }
 
@@ -1703,6 +1925,18 @@ function lbShow(item) {
     sidebar.appendChild(g);
   }
 
+  // Título de la obra arriba del sidebar
+  const tituloEl = document.createElement('div');
+  tituloEl.id = 'lb-obra-titulo';
+  const autorLabel = obra.autor ? (Array.isArray(obra.autor) ? obra.autor.join(' + ') : obra.autor) : '';
+  tituloEl.textContent = autorLabel + (autorLabel && obra.nombre ? ' — ' : '') + (obra.nombre || '');
+  tituloEl.onclick = (e) => {
+    e.stopPropagation();
+    document.getElementById('lightbox').classList.remove('open');
+    if (obra.id) renderObra(obra.id);
+  };
+  sidebar.appendChild(tituloEl);
+
   // Lista plana única — máximo 30 tags
   const autores = obra.autor ? (Array.isArray(obra.autor) ? obra.autor : [obra.autor]) : [];
   const fotografos = obra.fotografo ? (Array.isArray(obra.fotografo) ? obra.fotografo : [obra.fotografo]) : [];
@@ -1714,7 +1948,7 @@ function lbShow(item) {
     ...autores.map(v => [v,'autor',v]),
     obra.uso ? [obra.uso,'uso',obra.uso] : null,
     obra.pais ? [obra.pais,'pais',obra.pais] : null,
-    obra.ciudad ? [obra.ciudad,'ciudad',obra.ciudad] : null,
+    obra.ciudad ? [obra.ciudad,'region',obra.ciudad] : null,
     obra.decada ? [obra.decada,'decada',obra.decada] : null,
     obra.anio ? [String(obra.anio),'anio',String(obra.anio)] : null,
     ...fotografos.filter(f=>f&&f!=='Sin crédito').map(v => [v,'fotografo',v]),
@@ -1751,6 +1985,45 @@ function lbShow(item) {
     });
   }
 }
+function lbBboxShow(bboxes) {
+  const img = document.getElementById('lb-img');
+  const canvas = document.getElementById('lb-bbox-canvas');
+  if (!img || !canvas || !img.complete || img.naturalWidth === 0) return;
+  const area = document.getElementById('lb-img-area');
+  const areaRect = area.getBoundingClientRect();
+  const imgRect = img.getBoundingClientRect();
+  canvas.width = imgRect.width;
+  canvas.height = imgRect.height;
+  canvas.style.left = (imgRect.left - areaRect.left) + 'px';
+  canvas.style.top = (imgRect.top - areaRect.top) + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.globalCompositeOperation = 'destination-out';
+  bboxes.forEach(([y1, x1, y2, x2]) => {
+    const px = (x1 / 1000) * canvas.width;
+    const py = (y1 / 1000) * canvas.height;
+    const pw = ((x2 - x1) / 1000) * canvas.width;
+    const ph = ((y2 - y1) / 1000) * canvas.height;
+    ctx.filter = 'blur(8px)';
+    ctx.fillStyle = 'rgba(0,0,0,1)';
+    ctx.fillRect(px - 12, py - 12, pw + 24, ph + 24);
+  });
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.filter = 'none';
+  canvas.classList.add('active');
+}
+
+function lbBboxClear() {
+  const canvas = document.getElementById('lb-bbox-canvas');
+  if (canvas) {
+    canvas.classList.remove('active');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
 function lbOpen(idx) {
   lbIdx = idx;
   lbShow(lbImages[lbIdx] || lbImages[0]);
@@ -1761,6 +2034,7 @@ function lbPrev() { lbIdx = (lbIdx-1+lbImages.length) % lbImages.length; lbShow(
 function lbClose(e) { e.stopPropagation(); document.getElementById('lightbox').classList.remove('open'); const vid = document.getElementById('lb-video'); vid.pause(); vid.src=''; const mlt = document.getElementById('mobile-lb-tags'); if (mlt) mlt.remove(); }
 
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && searchActive) { toggleSearch(); return; }
   const popup = document.getElementById('lb-popup');
   if (popup.classList.contains('open')) {
     if (e.key==='Escape') lbPopupClose();
@@ -1786,7 +2060,7 @@ function lbPopupOpen(k, v) {
       else if (k === 'autor') match = getAutores(obra).includes(v);
       else if (k === 'uso') match = obra.uso === v;
       else if (k === 'pais') match = obra.pais === v;
-      else if (k === 'ciudad') match = obra.ciudad === v;
+      else if (k === 'region') match = obra.ciudad === v || obra.region === v;
       else if (k === 'decada') match = obra.decada === v;
       else if (k === 'anio') match = String(obra.anio) === v;
       else if (k === 'fotografo') match = getFotografos(obra).includes(v) && (img.tipografica||[]).length === 0;
@@ -1803,11 +2077,12 @@ function lbPopupOpen(k, v) {
   gallery.innerHTML = '';
 
   results.forEach(({ img, obra }) => {
-    const cell = mkCell(img.src, '', () => {
+    const _autorLabel = getAutores(obra).join(' + ');
+    const cell = mkCell(img.src, _autorLabel, () => {
       document.getElementById('lb-popup').classList.remove('open');
       document.getElementById('lightbox').classList.remove('open');
       renderObra(obra.id);
-    });
+    }, getAutores(obra), obra.nombre);
     // Tags B de la imagen
     const tagsB = [
       ...img.tipografica.map(v => ({k:'tipografica',v})),
@@ -1818,7 +2093,7 @@ function lbPopupOpen(k, v) {
     const tagsA = [
       ...getAutores(obra).map(a=>({k:'autor',v:a})),
       {k:'uso',v:obra.uso},{k:'pais',v:obra.pais},
-      {k:'ciudad',v:obra.ciudad},{k:'decada',v:obra.decada},{k:'anio',v:String(obra.anio)},
+      {k:'region',v:obra.ciudad},{k:'decada',v:obra.decada},{k:'anio',v:String(obra.anio)},
     ].filter(x=>x.v&&x.v!=='—');
     const combined = [...tagsB];
     for (const a of tagsA) { if (combined.length >= 8) break; combined.push(a); }
@@ -1848,6 +2123,138 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!e.target.closest('.filter-group') && !e.target.closest('#estado-btn-group')) closeAllDropdowns();
   });
 });
+
+// ─── BUSCADOR ─────────────────────────────────────────────────────────────────
+let searchActive = false;
+let searchQuery = '';
+let _allTagsCache = null;
+
+function showExtraTagBar(tag) {
+  const bar = document.getElementById('extra-tag-bar');
+  document.getElementById('extra-tag-label').textContent = tag;
+  bar.style.display = 'flex';
+}
+
+function hideExtraTagBar() {
+  const bar = document.getElementById('extra-tag-bar');
+  if (bar) { bar.style.display = 'none'; document.getElementById('extra-tag-label').textContent = ''; }
+}
+
+function clearExtraTag() {
+  searchQuery = '';
+  hideExtraTagBar();
+  renderHome();
+}
+
+function buildAllTags() {
+  if (_allTagsCache) return _allTagsCache;
+  const counter = {};
+  const inc = v => { if (v && v.trim()) counter[v.trim()] = (counter[v.trim()]||0) + 1; };
+  OBRAS.forEach(o => {
+    (Array.isArray(o.autor) ? o.autor : [o.autor]).forEach(inc);
+    inc(o.uso); inc(o.pais); inc(o.ciudad); inc(o.region); inc(o.decada); inc(String(o.anio));
+    (Array.isArray(o.fotografo) ? o.fotografo : [o.fotografo||'']).forEach(inc);
+    inc(o.complejidad); inc(o.estado);
+    (o.imagenes||[]).forEach(img => {
+      (img.extra||[]).forEach(inc);
+      (img.tipografica||[]).forEach(inc);
+      (img.elementos||[]).forEach(el => { inc(el.tipoespacial); inc(el.material); inc(el.componente); });
+    });
+  });
+  _allTagsCache = Object.entries(counter)
+    .filter(([t]) => t && t !== 'undefined' && t !== 'null')
+    .sort((a,b) => b[1]-a[1]);
+  return _allTagsCache;
+}
+
+function renderTagCloud(filter) {
+  const cloud = document.getElementById('search-tag-cloud');
+  const countEl = document.getElementById('search-count');
+  const all = buildAllTags();
+  const data = filter ? all.filter(([t]) => t.toLowerCase().includes(filter.toLowerCase())) : all;
+  countEl.textContent = data.length + ' tags';
+  cloud.innerHTML = '';
+  data.forEach(([tag, count]) => {
+    const btn = document.createElement('button');
+    btn.className = 'stag';
+    btn.title = tag + ' (' + count + ')';
+    btn.textContent = tag;
+    btn.onclick = () => {
+      // Cerrar panel
+      searchActive = false;
+      document.getElementById('search-bar').classList.remove('open');
+      document.getElementById('btn-search').classList.remove('active');
+      // Asegurar que la intro está desactivada
+      document.getElementById('intro-page').classList.remove('active');
+      // Intentar activar en los filtros existentes
+      const fields = ['autor','uso','pais','region','decada','anio','fotografo','complejidad','estado','tipoespacial','material','componente','tipografica'];
+      for (const k of fields) {
+        const fi = document.getElementById('fi-' + k);
+        if (!fi) continue;
+        const tagEls = fi.querySelectorAll('.tag');
+        for (const el of tagEls) {
+          if (el.dataset.v === tag) { toggleF(k, tag, el); return; }
+        }
+      }
+      // Fallback: búsqueda de texto libre
+      searchQuery = tag.toLowerCase();
+      showExtraTagBar(tag);
+      renderHome();
+    };
+    cloud.appendChild(btn);
+  });
+}
+
+function filterTagCloud(val) {
+  renderTagCloud(val.trim());
+}
+
+function toggleSearch() {
+  searchActive = !searchActive;
+  const bar = document.getElementById('search-bar');
+  const btn = document.getElementById('btn-search');
+  if (searchActive) {
+    bar.classList.add('open');
+    btn.classList.add('active');
+    renderTagCloud('');
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-input').focus();
+  } else {
+    bar.classList.remove('open');
+    btn.classList.remove('active');
+  }
+}
+
+function applySearch() {
+  searchQuery = document.getElementById('search-input').value.trim().toLowerCase();
+  renderHome();
+}
+
+function clearSearch() {
+  searchQuery = '';
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-count').textContent = '';
+  renderHome();
+}
+
+function obraMatchesSearch(obra) {
+  if (!searchQuery) return true;
+  const terms = searchQuery.split(/\s+/).filter(Boolean);
+  const autorArr = Array.isArray(obra.autor) ? obra.autor : [obra.autor];
+  const fotografoArr = Array.isArray(obra.fotografo) ? obra.fotografo : [obra.fotografo || ''];
+  let haystack = [obra.nombre||'', ...autorArr, obra.ciudad||'', obra.pais||'', obra.uso||'', obra.anio||'', obra.decada||'', obra.estado||'', ...fotografoArr].join(' ').toLowerCase();
+  if (obra.imagenes) {
+    obra.imagenes.forEach(img => {
+      if (img.extra) haystack += ' ' + img.extra.join(' ').toLowerCase();
+      if (img.tipografica) haystack += ' ' + img.tipografica.join(' ').toLowerCase();
+      if (img.elementos) img.elementos.forEach(el => { haystack += ' ' + (el.tipoespacial||'') + ' ' + (el.material||'') + ' ' + (el.componente||''); });
+    });
+  }
+  return terms.every(t => haystack.includes(t));
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
 </script>
 </body>
 </html>
